@@ -1,0 +1,7 @@
+Just shipped AuthAgent: Decentralized Identity for Autonomous AI for Authorized to Act: Auth0 for AI Agents | $10,000 | Deadline: Mar 02 - Apr 07, 2026!
+
+First AI agent framework with native Decentralized Identity (DID) support for autonomous transaction signing, enabling agents to prove ownership of their actions without human inte
+
+https://github.com/77svene/authagent
+
+#hackathon #AI #Web3 #DeFi @lablabai

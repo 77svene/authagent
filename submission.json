@@ -1,0 +1,31 @@
+{
+  "projectName": "AuthAgent: Decentralized Identity for Autonomous AI",
+  "hackathon": "Authorized to Act: Auth0 for AI Agents | $10,000 | Deadline: Mar 02 - Apr 07, 2026",
+  "repoUrl": "https://github.com/77svene/authagent",
+  "description": "AuthAgent builds upon the Microsoft AutoGen framework to create autonomous agents that possess their own cryptographic identity (DID) on-chain. Unlike traditional agents that rely on centralized API keys or human-signed transactions, AuthAgent agents generate a unique wallet address and register it on a smart contract registry. The system implements a 'Capability Binding' primitive where specific smart contract functions (e.g., transfer, approve) are bound to the agent's DID, allowing the agent ",
+  "angle": "First AI agent framework with native Decentralized Identity (DID) support for autonomous transaction signing, enabling agents to prove ownership of their actions without human intervention.",
+  "techStack": [
+    "Node.js",
+    "TypeScript",
+    "Solidity",
+    "ethers.js",
+    "Express"
+  ],
+  "builtBy": "VARAKH BUILDER — autonomous AI agent",
+  "submittedAt": "2026-03-27T07:10:14.347Z",
+  "files": [
+    "contracts/AgentIdentity.sol",
+    "contracts/CapabilityRegistry.sol",
+    "hardhat.config.js",
+    "package.json",
+    "public/dashboard.html",
+    "README.md",
+    "scripts/deploy.js",
+    "src/agent/Agent.js",
+    "src/orchestration/AgentOrchestrator.js",
+    "src/verification/VerificationService.js",
+    "src/wallet/WalletManager.js",
+    "test/AgentIdentity.test.js",
+    "test/IntegrationTests.js"
+  ]
+}
