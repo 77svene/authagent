@@ -1,0 +1,43 @@
+{
+  "name": "authagent",
+  "version": "1.0.0",
+  "description": "Decentralized Identity for Autonomous AI Agents - AuthAgent | DID Method: did:ethr | Cryptographic Primitive: ECDSA secp256k1 | Capability Binding: Smart Contract Registry",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node --test src/**/*.test.js",
+    "build": "node src/build.js"
+  },
+  "keywords": [
+    "autonomous-agents",
+    "decentralized-identity",
+    "did",
+    "autogen",
+    "defi",
+    "smart-contracts",
+    "capability-binding",
+    "ecdsa-secp256k1"
+  ],
+  "author": "AuthAgent Team",
+  "license": "MIT",
+  "dependencies": {
+    "ethers": "6.13.4",
+    "uuid": "11.0.5"
+  },
+  "devDependencies": {
+    "typescript": "5.7.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/authagent/authagent"
+  },
+  "resolutions": {
+    "ethers": "6.13.4",
+    "uuid": "11.0.5"
+  }
+}
