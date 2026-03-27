@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AuthAgent | Decentralized Identity Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.5/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root { --bg-primary: #0a0a0f; --bg-secondary: #12121a; --bg-tertiary: #1a1a25; --text-primary: #e0e0e0; --text-secondary: #a0a0b0; --accent-primary: #00d4ff; --accent-secondary: #7c3aed; --success: #10b981; --warning: #f59e0b; --danger: #ef4444; --border: #2a2a35; }
+    body { font-family: 'SF Mono', 'Fira Code', monospace; background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; }
+    .container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+    .header h1 { font-size: 1.5rem; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .status-indicator { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); animation: pulse 2s infinite; }
+    .status-dot.disconnected { background: var(--danger); }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+    .card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; }
+    .card h2 { font-size: 1rem; margin-bottom: 1rem; color: var(--accent-primary); display: flex; justify-content: space-between; align-items: center; }
+    .card h2 .badge { font-size: 0.75rem; padding: 0.25rem 0.5rem; background: var(--bg-tertiary); border-radius: 4px; color: var(--text-secondary); }
+    .agent-list { display: flex; flex-direction: column; gap: 1rem; }
+    .agent-item { background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; transition: border-color 0.2s; }
+    .agent-item:hover { border-color: var(--accent-primary); }
+    .agent-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem; }
+    .agent-id { font-size: 0.875rem; color: var(--accent-primary); }
+    .agent-address { font-size: 0.75rem; color: var(--text-secondary); word-break: break-all; }
+    .agent-status { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; }
+    .status-active { color: var(--success); }
+    .status-inactive { color: var(--text-secondary); }
+    .capabilities { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+    .capability-tag { font-size: 0.7rem; padding: 0.25rem 0.5rem; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 4px; color: var(--text-secondary); }
+    .capability-tag.active { border-color: var(--accent-primary); color: var(--accent-primary); }
+    .transaction-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .transaction-item { background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; padding: 0.75rem; font-size: 0.8rem; }
+    .transaction-header { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }
+    .tx-type { font-weight: 600; color: var(--accent-primary); }
+    .tx-hash { font-size: 0.7rem; color: var(--text-secondary); word-break: break-all; }
+    .tx-meta { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-secondary); }
+    .tx-success { color: var(--success); }
+    .tx-failed { color: var(--danger); }
+    .control-panel { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
+    .btn { padding: 0.75rem 1.5rem; border: none; border-radius: 6px; font-family: inherit; font-size: 0.875rem; cursor: pointer; transition: all 0.2s; }
+    .btn-primary { background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color: white; }
+    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-secondary { background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); }
+    .btn-secondary:hover { border-color: var(--accent-primary); }
+    .input-group { display: flex; gap: 0.5rem; }
+    .input { flex: 1; padding: 0.75rem; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-family: inherit; font-size: 0.875rem; }
+    .input:focus { outline: none; border-color: var(--accent-primary); }
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+    .stat-card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; text-align: center; }
+    .stat-value { font-size: 2rem; font-weight: 700; color: var(--accent-primary); margin-bottom: 0.5rem; }
+    .stat-label { font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
+    .crypto-proof { font-size: 0.7rem; color: var(--text-secondary); word-break: break-all; margin-top: 0.5rem; padding: 0.5rem; background: var(--bg-primary); border-radius: 4px; }
+    .websocket-log { font-size: 0.7rem; color: var(--text-secondary); max-height: 150px; overflow-y: auto; }
+    .websocket-log .log-entry { padding: 0.25rem 0; border-bottom: 1px solid var(--border); }
+    .websocket-log .log-entry:last-child { border-bottom: none; }
+    .websocket-log .log-time { color: var(--accent-primary); margin-right: 0.5rem; }
+    .loading { display: flex; justify-content: center; align-items: center; min-height: 200px; color: var(--text-secondary); }
+    .error-banner { background: var(--danger); color: white; padding: 1rem; border-radius: 6px; margin-bottom: 1rem; }
+    .success-banner { background: var(--success); color: white; padding: 1rem; border-radius: 6px; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useCallback, useMemo } = React;
+    const { ethers } = window.ethers;
+
+    const CONTRACT_ADDRESSES = {
+      AGENT_IDENTITY: '0x0000000000000000000000000000000000000000',
+      CAPABILITY_REGISTRY: '0x0000000000000000000000000000000000000000'
+    };
+
+    const ABI = {
+      AGENT_IDENTITY: [
+        'function getAgentAddress(uint256 tokenId) view returns (address)',
+        'function agentExists(uint256 tokenId) view returns (bool)',
+        'function getAgentNonce(uint256 tokenId) view returns (uint256)',
+        'event AgentRegistered(uint256 indexed tokenId, address indexed agentAddress, bytes32 indexed capabilityProof)',
+        'event CapabilityBound(uint256 indexed tokenId, bytes32 indexed capabilityHash, address targetContract, bytes4 functionSelector)'
+      ],
+      CAPABILITY_REGISTRY: [
+        'function getAgentCapabilities(uint256 tokenId) view returns (bytes32[])',
+        'function getCapabilityProof(bytes32 capabilityHash) view returns (bool)',
+        'function getCapabilityManifest(bytes32 capabilityHash) view returns (tuple(bytes32 agentDID, bytes32 functionHash, address targetContract, uint256 timestamp, bool active))',
+        'event CapabilityRegistered(uint256 indexed tokenId, bytes32 indexed capabilityHash, bytes32 indexed manifestHash)',
+        'event CapabilityRevoked(uint256 indexed tokenId, bytes32 indexed capabilityHash)'
+      ]
+    };
+
+    const WebSocketService = {
+      url: null,
+      socket: null,
+      listeners: new Map(),
+      connected: false,
+
+      connect(url) {
+        this.url = url;
+        this.socket = new WebSocket(url);
+        
+        this.socket.onopen = () => {
+          this.connected = true;
+          this.notifyListeners('connected', { url });
+        };
+
+        this.socket.onclose = () => {
+          this.connected = false;
+          this.notifyListeners('disconnected', {});
+        };
+
+        this.socket.onerror = (error) => {
+          this.notifyListeners('error', { error: error.message });
+        };
+
+        this.socket.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            this.notifyListeners('message', data);
+          } catch (e) {
+            this.notifyListeners('error', { error: 'Invalid JSON message' });
+          }
+        };
+      },
+
+      disconnect() {
+        if (this.socket) {
+          this.socket.close();
+          this.socket = null;
+        }
+      },
+
+      subscribe(event, callback) {
+        if (!this.listeners.has(event)) {
+          this.listeners.set(event, new Set());
+        }
+        this.listeners.get(event).add(callback);
+        return () => this.listeners.get(event)?.delete(callback);
+      },
+
+      notifyListeners(event, data) {
+        this.listeners.get(event)?.forEach(callback => callback(data));
+      }
+    };
+
+    const AgentIdentityService = {
+      provider: null,
+      contract: null,
+
+      async init(provider, address) {
+        this.provider = provider;
+        this.contract = new ethers.Contract(address, ABI.AGENT_IDENTITY, provider);
+      },
+
+      async getAgentCount() {
+        try {
+          const count = await this.contract.getAgentCount?.() || 0;
+          return Number(count);
+        } catch (e) {
+          return 0;
+        }
+      },
+
+      async getAgentAddress(tokenId) {
+        try {
+          const address = await this.contract.getAgentAddress(tokenId);
+          return address;
+        } catch (e) {
+          return null;
+        }
+      },
+
+      async getAgentNonce(tokenId) {
+        try {
+          const nonce = await this.contract.getAgentNonce(tokenId);
+          return Number(nonce);
+        } catch (e) {
+          return 0;
+        }
+      },
+
+      async verifyAgentIdentity(tokenId, signature, nonce) {
+        try {
+          const domain = {
+            name: 'AuthAgent Identity',
+            version: '1',
+            chainId: 1,
+            verifyingContract: CONTRACT_ADDRESSES.AGENT_IDENTITY
+          };
+          
+          const types = {
+            IdentityProof: [
+              { name: 'agentDID', type: 'bytes32' },
+              { name: 'nonce', type: 'uint256' },
+              { name: 'timestamp', type: 'uint256' }
+            ]
+          };
+
+          const message = {
+            agentDID: ethers.id(`agent:${tokenId}`),
+            nonce: nonce,
+            timestamp: Math.floor(Date.now() / 1000)
+          };
+
+          const recoveredAddress = ethers.verifyTypedData(domain, types, message, signature);
+          return recoveredAddress;
+        } catch (e) {
+          return null;
+        }
+      }
+    };
+
+    const CapabilityRegistryService = {
+      provider: null,
+      contract: null,
+
+      async init(provider, address) {
+        this.provider = provider;
+        this.contract = new ethers.Contract(address, ABI.CAPABILITY_REGISTRY, provider);
+      },
+
+      async getAgentCapabilities(tokenId) {
+        try {
+          const caps = await this.contract.getAgentCapabilities(tokenId);
+          return caps.map(h => h);
+        } catch (e) {
+          return [];
+        }
+      },
+
+      async getCapabilityProof(capabilityHash) {
+        try {
+          const exists = await this.contract.getCapabilityProof(capabilityHash);
+          return exists;
+        } catch (e) {
+          return false;
+        }
+      },
+
+      async getCapabilityManifest(capabilityHash) {
+        try {
+          const manifest = await this.contract.getCapabilityManifest(capabilityHash);
+          return {
+            agentDID: manifest[0],
+            functionHash: manifest[1],
+            targetContract: manifest[2],
+            timestamp: Number(manifest[3]),
+            active: manifest[4]
+          };
+        } catch (e) {
+          return null;
+        }
+      },
+
+      async verifyCapability(tokenId, capabilityHash, merkleProof) {
+        try {
+          const root = await this.contract.getMerkleRoot?.() || ethers.ZeroHash;
+          const isValid = MerkleProof.verify(merkleProof, root, capabilityHash);
+          return isValid;
+        } catch (e) {
+          return false;
+        }
+      }
+    };
+
+    const TransactionHistoryService = {
+      transactions: [],
+      maxHistory: 50,
+
+      addTransaction(tx) {
+        this.transactions.unshift({
+          ...tx,
+          timestamp: Date.now(),
+          id: Math.random().toString(36).substr(2, 9)
+        });
+        if (this.transactions.length > this.maxHistory) {
+          this.transactions = this.transactions.slice(0, this.maxHistory);
+        }
+      },
+
+      getTransactions() {
+        return this.transactions;
+      },
+
+      clear() {
+        this.transactions = [];
+      }
+    };
+
+    function useWebSocketSubscription(event, callback) {
+      useEffect(() => {
+        const unsubscribe = WebSocketService.subscribe(event, callback);
+        return unsubscribe;
+      }, [event, callback]);
+    }
+
+    function StatCard({ label, value, icon }) {
+      return (
+        <div className="stat-card">
+          <div className="stat-value">{value}</div>
+          <div className="stat-label">{label}</div>
+        </div>
+      );
+    }
+
+    function AgentCard({ agent, capabilities, onVerify }) {
+      const [isVerifying, setIsVerifying] = useState(false);
+      const [verificationResult, setVerificationResult] = useState(null);
+
+      const handleVerify = async () => {
+        setIsVerifying(true);
+        try {
+          const recoveredAddress = await AgentIdentityService.verifyAgentIdentity(
+            agent.tokenId,
+            agent.signature,
+            agent.nonce
+          );
+          setVerificationResult({
+            valid: recoveredAddress !== null,
+            recoveredAddress
+          });
+        } catch (e) {
+          setVerificationResult({ valid: false, error: e.message });
+        }
+        setIsVerifying(false);
+      };
+
+      return (
+        <div className="agent-item">
+          <div className="agent-header">
+            <div>
+              <div className="agent-id">Agent #{agent.tokenId}</div>
+              <div className="agent-address">{agent.address}</div>
+            </div>
+            <div className={`agent-status ${agent.isActive ? 'status-active' : 'status-inactive'}`}>
+              <span className="status-dot" style={{ background: agent.isActive ? 'var(--success)' : 'var(--text-secondary)' }}></span>
+              {agent.isActive ? 'ACTIVE' : 'INACTIVE'}
+            </div>
+          </div>
+          <div className="capabilities">
+            {capabilities.map((cap, idx) => (
+              <span key={idx} className="capability-tag active">{cap}</span>
+            ))}
+            {capabilities.length === 0 && <span className="capability-tag">No capabilities</span>}
+          </div>
+          <div className="crypto-proof">
+            <strong>Cryptographic Proof:</strong> {agent.proofHash?.substr(0, 20)}...{agent.proofHash?.substr(-16)}
+          </div>
+          <button 
+            className="btn btn-secondary" 
+            style={{ marginTop: '0.75rem', width: '100%' }}
+            onClick={handleVerify}
+            disabled={isVerifying}
+          >
+            {isVerifying ? 'Verifying...' : 'Verify Identity'}
+          </button>
+          {verificationResult && (
+            <div className={`crypto-proof ${verificationResult.valid ? 'tx-success' : 'tx-failed'}`} style={{ marginTop: '0.5rem' }}>
+              {verificationResult.valid ? '✓ Identity Verified' : '✗ Verification Failed'}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function TransactionItem({ tx }) {
+      return (
+        <div className="transaction-item">
+          <div className="transaction-header">
+            <span className="tx-type">{tx.type}</span>
+            <span className={`tx-meta ${tx.success ? 'tx-success' : 'tx-failed'}`}>
+              {tx.success ? 'SUCCESS' : 'FAILED'}
+            </span>
+          </div>
+          <div className="tx-hash">{tx.hash}</div>
+          <div className="tx-meta">
+            <span>Agent: {tx.agentId}</span>
+            <span>{new Date(tx.timestamp).toLocaleTimeString()}</span>
+          </div>
+        </div>
+      );
+    }
+
+    function Dashboard() {
+      const [agents, setAgents] = useState([]);
+      const [capabilities, setCapabilities] = useState({});
+      const [transactions, setTransactions] = useState([]);
+      const [isConnected, setIsConnected] = useState(false);
+      const [isWalletConnected, setIsWalletConnected] = useState(false);
+      const [error, setError] = useState(null);
+      const [stats, setStats] = useState({ totalAgents: 0, activeAgents: 0, totalCapabilities: 0, totalTransactions: 0 });
+      const [websocketUrl, setWebsocketUrl] = useState('ws://localhost:8080');
+
+      const fetchAgents = useCallback(async () => {
+        try {
+          const count = await AgentIdentityService.getAgentCount();
+          const agentList = [];
+          for (let i = 1; i <= count; i++) {
+            const address = await AgentIdentityService.getAgentAddress(i);
+            const nonce = await AgentIdentityService.getAgentNonce(i);
+            if (address) {
+              agentList.push({
+                tokenId: i,
+                address,
+                nonce,
+                isActive: true,
+                proofHash: ethers.id(`agent:${i}`)
+              });
+            }
+          }
+          setAgents(agentList);
+          setStats(prev => ({ ...prev, totalAgents: agentList.length }));
+        } catch (e) {
+          setError(`Failed to fetch agents: ${e.message}`);
+        }
+      }, []);
+
+      const fetchCapabilities = useCallback(async (tokenId) => {
+        try {
+          const caps = await CapabilityRegistryService.getAgentCapabilities(tokenId);
+          const capList = caps.map(h => h.substr(0, 10) + '...' + h.substr(-8));
+          setCapabilities(prev => ({ ...prev, [tokenId]: capList }));
+          setStats(prev => ({ ...prev, totalCapabilities: Object.values(prev).reduce((a, b) => a + b.length, 0) }));
+        } catch (e) {
+          console.error(`Failed to fetch capabilities for agent ${tokenId}:`, e);
+        }
+      }, []);
+
+      const fetchAllCapabilities = useCallback(async () => {
+        for (const agent of agents) {
+          await fetchCapabilities(agent.tokenId);
+        }
+      }, [agents, fetchCapabilities]);
+
+      const fetchTransactions = useCallback(() => {
+        const txs = TransactionHistoryService.getTransactions();
+        setTransactions(txs);
+        setStats(prev => ({ ...prev, totalTransactions: txs.length }));
+      }, []);
+
+      useEffect(() => {
+        const init = async () => {
+          try {
+            if (window.ethereum) {
+              const provider = new ethers.BrowserProvider(window.ethereum);
+              const accounts = await provider.listAccounts();
+              if (accounts.length > 0) {
+                setIsWalletConnected(true);
+                await AgentIdentityService.init(provider, CONTRACT_ADDRESSES.AGENT_IDENTITY);
+                await CapabilityRegistryService.init(provider, CONTRACT_ADDRESSES.CAPABILITY_REGISTRY);
+                await fetchAgents();
+                await fetchAllCapabilities();
+                fetchTransactions();
+              }
+            }
+          } catch (e) {
+            setError(`Wallet connection failed: ${e.message}`);
+          }
+        };
+        init();
+      }, [fetchAgents, fetchAllCapabilities, fetchTransactions]);
+
+      useWebSocketSubscription('connected', () => {
+        setIsConnected(true);
+        setError(null);
+      });
+
+      useWebSocketSubscription('disconnected', () => {
+        setIsConnected(false);
+      });
+
+      useWebSocketSubscription('transaction', (data) => {
+        TransactionHistoryService.addTransaction(data);
+        fetchTransactions();
+      });
+
+      useWebSocketSubscription('agent_activity', (data) => {
+        if (data.type === 'capability_registered') {
+          fetchCapabilities(data.tokenId);
+        }
+      });
+
+      useEffect(() => {
+        const interval = setInterval(() => {
+          if (isWalletConnected) {
+            fetchAgents();
+            fetchAllCapabilities();
+            fetchTransactions();
+          }
+        }, 5000);
+        return () => clearInterval(interval);
+      }, [isWalletConnected, fetchAgents, fetchAllCapabilities, fetchTransactions]);
+
+      const handleConnectWebSocket = () => {
+        WebSocketService.connect(websocketUrl);
+      };
+
+      const handleDisconnectWebSocket = () => {
+        WebSocketService.disconnect();
+      };
+
+      const handleRefresh = () => {
+        fetchAgents();
+        fetchAllCapabilities();
+        fetchTransactions();
+      };
+
+      const handleClearHistory = () => {
+        TransactionHistoryService.clear();
+        fetchTransactions();
+      };
+
+      return (
+        <div className="container">
+          <div className="header">
+            <h1>AuthAgent | Decentralized Identity Dashboard</h1>
+            <div className="status-indicator">
+              <span className={`status-dot ${!isConnected ? 'disconnected' : ''}`}></span>
+              {isConnected ? 'WebSocket Connected' : 'WebSocket Disconnected'}
+            </div>
+          </div>
+
+          {error && <div className="error-banner">{error}</div>}
+
+          <div className="control-panel">
+            <div className="input-group">
+              <input 
+                type="text" 
+                className="input" 
+                placeholder="WebSocket URL" 
+                value={websocketUrl}
+                onChange={(e) => setWebsocketUrl(e.target.value)}
+              />
+              <button className="btn btn-primary" onClick={handleConnectWebSocket}>Connect</button>
+              <button className="btn btn-secondary" onClick={handleDisconnectWebSocket}>Disconnect</button>
+            </div>
+            <button className="btn btn-secondary" onClick={handleRefresh}>Refresh</button>
+            <button className="btn btn-secondary" onClick={handleClearHistory}>Clear History</button>
+          </div>
+
+          <div className="stats-grid">
+            <StatCard label="Total Agents" value={stats.totalAgents} />
+            <StatCard label="Active Agents" value={stats.activeAgents} />
+            <StatCard label="Total Capabilities" value={stats.totalCapabilities} />
+            <StatCard label="Transactions" value={stats.totalTransactions} />
+          </div>
+
+          <div className="grid">
+            <div className="card">
+              <h2>
+                Registered Agents
+                <span className="badge">{agents.length}</span>
+              </h2>
+              <div className="agent-list">
+                {agents.length === 0 ? (
+                  <div className="loading">No agents registered</div>
+                ) : (
+                  agents.map(agent => (
+                    <AgentCard 
+                      key={agent.tokenId} 
+                      agent={agent} 
+                      capabilities={capabilities[agent.tokenId] || []}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="card">
+              <h2>
+                Transaction History
+                <span className="badge">{transactions.length}</span>
+              </h2>
+              <div className="transaction-list">
+                {transactions.length === 0 ? (
+                  <div className="loading">No transactions</div>
+                ) : (
+                  transactions.map(tx => (
+                    <TransactionItem key={tx.id} tx={tx} />
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
+            <h2>
+              WebSocket Activity Log
+              <span className="badge">Real-time</span>
+            </h2>
+            <div className="websocket-log">
+              <div className="log-entry">
+                <span className="log-time">[SYSTEM]</span>
+                Dashboard initialized with AuthAgent protocol v1.0.0
+              </div>
+              <div className="log-entry">
+                <span className="log-time">[SYSTEM]</span>
+                Connected to AgentIdentity contract at {CONTRACT_ADDRESSES.AGENT_IDENTITY}
+              </div>
+              <div className="log-entry">
+                <span className="log-time">[SYSTEM]</span>
+                Connected to CapabilityRegistry contract at {CONTRACT_ADDRESSES.CAPABILITY_REGISTRY}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<Dashboard />);
+  </script>
+</body>
+</html>
